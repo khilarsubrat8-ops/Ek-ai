@@ -1,15 +1,15 @@
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+      export async function handler(event) {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: "Server missing GEMINI_API_KEY" });
+    return { statusCode: 500, body: JSON.stringify({ error: "Server missing GEMINI_API_KEY" }) };
   }
 
   try {
-    const { messages } = req.body;
+    const { messages } = JSON.parse(event.body);
 
     const contents = messages.map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
@@ -33,17 +33,14 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    if (!response.ok) {
-      return res.status(response.status).json(data);
-    }
-
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    return res.status(200).json({
-      content: [{ type: "text", text }],
-    });
+    return {
+      statusCode: response.status,
+      body: JSON.stringify({ content: [{ type: "text", text }] }),
+    };
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    return { statusCode: 500, body: JSON.stringify({ error: "Internal server error" }) };
   }
-}
+      }
